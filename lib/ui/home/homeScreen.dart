@@ -4,6 +4,7 @@ import 'package:app_doan_nhandien/ui/upload/uploadScreen.dart';
 import 'package:app_doan_nhandien/ui/history/historyScreen.dart';
 import 'package:flutter/material.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 2; // Mặc định chọn tab giữa (Home)
 
   final List<Widget> _screens = [
-    const HistoryScreen(),
+     HistoryScreen(),
     const UploadScreen(),
     const Center(child: Text('Nhận diện hoa ngay!')), // Home
     const CameraScreen(),
@@ -58,3 +59,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

@@ -12,11 +12,6 @@ class SettingScreen extends StatelessWidget {
       body: ListView(
         children: [
           const ListTile(
-            leading: Icon(Icons.account_circle),
-            title: Text('Tài khoản'),
-            trailing: Icon(Icons.chevron_right),
-          ),
-          const ListTile(
             leading: Icon(Icons.notifications),
             title: Text('Thông báo'),
             trailing: Icon(Icons.chevron_right),
@@ -38,14 +33,11 @@ class SettingScreen extends StatelessWidget {
             leading: const Icon(Icons.info, color: Colors.blue),
             title: const Text('Về ứng dụng'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {}, // Thông tin ứng dụng
+            onTap: (
+
+                ) {}, // Thông tin ứng dụng
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.exit_to_app, color: Colors.red),
-            title: const Text('Đăng xuất'),
-            onTap: () {}, // Xử lý đăng xuất
-          ),
+
         ],
       ),
     );

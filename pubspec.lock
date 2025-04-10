@@ -29,10 +29,10 @@ packages:
     dependency: transitive
     description:
       name: camera_android
-      sha256: "997f19dbdb1bb0e40bdb87265c7e550abea657fe3c4ba3720f81e97b6d4b64dd"
+      sha256: bd9737671a00d979e0310a946e5be2fdc621b6a36b95378755cb3e4498e61485
       url: "https://pub.dev"
     source: hosted
-    version: "0.10.10+1"
+    version: "0.10.10+2"
   camera_avfoundation:
     dependency: transitive
     description:
@@ -432,6 +432,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  quiver:
+    dependency: transitive
+    description:
+      name: quiver
+      sha256: ea0b925899e64ecdfbf9c7becb60d5b50e706ade44a85b2363be2a22d88117d2
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -493,6 +501,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.3"
+  tflite_flutter:
+    dependency: "direct main"
+    description:
+      name: tflite_flutter
+      sha256: "88b203c6efd7f4269aa137ef31e760d53e6639e60cd17bb86602462f72d4176b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.9.5"
   typed_data:
     dependency: transitive
     description:
