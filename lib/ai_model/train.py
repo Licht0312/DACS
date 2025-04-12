@@ -1,36 +1,78 @@
 import tensorflow as tf
-from tensorflow import keras
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+import os
 
-# 1. Chuẩn bị dữ liệu
-train_ds = keras.utils.image_dataset_from_directory(
-    'data/train',
-    image_size=(224, 224),
-    batch_size=32)
 
-val_ds = keras.utils.image_dataset_from_directory(
-    'data/val',
-    image_size=(224, 224),
-    batch_size=32)
+# Đường dẫn đến dataset
+dataset_path = 'flower_dataset'  # chỉnh lại nếu khác
 
-# 2. Tạo model
-model = keras.Sequential([
-    keras.layers.Rescaling(1./255),
-    keras.layers.Conv2D(32, 3, activation='relu'),
-    keras.layers.MaxPooling2D(),
-    keras.layers.Flatten(),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(num_classes)
+# Tạo data generator
+image_size = (150, 150)
+batch_size = 32
+
+datagen = ImageDataGenerator(
+    rescale=1./255,
+    validation_split=0.2
+)
+
+train_generator = datagen.flow_from_directory(
+    dataset_path,
+    target_size=image_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='training'
+)
+
+val_generator = datagen.flow_from_directory(
+    dataset_path,
+    target_size=image_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    subset='validation'
+)
+
+# Xây dựng model
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(150,150,3)),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(train_generator.num_classes, activation='softmax')
 ])
 
-# 3. Train model
-model.compile(
-    optimizer='adam',
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy'])
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
-model.fit(train_ds, validation_data=val_ds, epochs=10)
+# Train model
+model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=10
+)
 
-# 4. Export sang định dạng Flutter (TFLite)
+# Lưu mô hình định dạng .h5
+model.save('flower_model.h5')
+
+model = tf.keras.models.load_model('flower_model.h5')
+
+# Convert to TFLite
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()
-open("model.tflite", "wb").write(tflite_model)
+
+# Save thành file .tflite
+with open('flower_model.tflite', 'wb') as f:
+    f.write(tflite_model)
+
+print("✅ Đã chuyển thành công model sang .tflite!")
+
+with open('flower_model.tflite', 'wb') as f:
+    f.write(tflite_model)
+
+print("✅ Mô hình đã được huấn luyện và lưu thành công.")

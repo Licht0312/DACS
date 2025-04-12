@@ -1,8 +1,16 @@
 import 'package:app_doan_nhandien/ui/home/homeScreen.dart';
 import 'package:flutter/material.dart';
+import 'flower_classifier.dart'; // import file AI
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
-
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await FlowerClassifier.loadModel(); // Tải mô hình AI
+  } catch (e) {
+    print("Lỗi khi tải mô hình: $e");
+  }
   runApp(const MyApp());
 }
 
