@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:app_doan_nhandien/flower_classifier.dart';
-import 'package:app_doan_nhandien/ui/lookup/lookupScreen.dart';
-import 'package:app_doan_nhandien/ui/setting/settingScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,20 +12,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  int _currentIndex = 0;
-  File? _image;
-  String _result = '';
-  CameraController? _cameraController;
+  CameraController? _controller;
+  File? _capturedImage;
+  String _recognitionResult = '';
+  bool _isLoading = false;
   FlashMode _flashMode = FlashMode.off;
-  bool _showPreview = false;
   bool _isCameraInitialized = false;
-  bool _isProcessing = false;
-
-  final List<Widget> _screens = [
-    const SizedBox(), // Placeholder, sẽ thay bằng camera view
-    const LookupScreen(),
-    const SettingScreen(),
-  ];
 
   @override
   void initState() {
@@ -37,24 +27,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return;
-    }
-
-    if (state == AppLifecycleState.inactive) {
-      _cameraController?.dispose();
-    } else if (state == AppLifecycleState.resumed) {
-      if (_cameraController != null) {
-        _initializeCamera();
-      }
-    }
-  }
-
-  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cameraController?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -66,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
 
-      _cameraController = CameraController(
+      _controller = CameraController(
         cameras.firstWhere(
               (camera) => camera.lensDirection == CameraLensDirection.back,
           orElse: () => cameras.first,
@@ -74,8 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ResolutionPreset.high,
       );
 
-      await _cameraController!.initialize();
-
+      await _controller!.initialize();
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
@@ -91,148 +65,145 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      _processImage(File(picked.path));
-    }
-  }
-
   Future<void> _takePicture() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized) {
       return;
     }
 
-    try {
-      setState(() {
-        _isProcessing = true;
-      });
+    setState(() {
+      _isLoading = true;
+    });
 
-      final image = await _cameraController!.takePicture();
+    try {
+      final image = await _controller!.takePicture();
       _processImage(File(image.path));
     } catch (e) {
       debugPrint('Error taking picture: $e');
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _processImage(File(pickedFile.path));
     }
   }
 
   Future<void> _processImage(File image) async {
     setState(() {
-      _image = image;
-      _showPreview = true;
-      _result = '';
+      _capturedImage = image;
+      _recognitionResult = '';
     });
 
     try {
-      // Gọi AI nhận diện
-      final result = await FlowerClassifier.classifyImage(image.path);
+      final results = await FlowerClassifier.classifyImage(image.path);
+
       if (mounted) {
         setState(() {
-          _result = result != null && result.isNotEmpty
-              ? result[0]['label']
-              : 'Không nhận diện được loại hoa';
-          _isProcessing = false;
+          // Kiểm tra kết quả theo nhiều cấp độ để tránh lỗi
+          if (results != null && results is List && results.isNotEmpty) {
+            // Kiểm tra cấu trúc object kết quả
+            final firstResult = results[0];
+            if (firstResult is Map && firstResult.containsKey('label')) {
+              _recognitionResult = firstResult['label'].toString();
+            } else {
+              _recognitionResult = 'Kết quả không đúng định dạng';
+            }
+          } else {
+            _recognitionResult = 'Không nhận diện được loại hoa';
+          }
+          _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error processing image: $e');
+      debugPrint('Stack trace: $stackTrace');
+
       if (mounted) {
         setState(() {
-          _result = 'Lỗi khi xử lý ảnh';
-          _isProcessing = false;
+          // Phân loại lỗi cụ thể hơn
+          if (e.toString().contains('timeout')) {
+            _recognitionResult = 'Lỗi: Quá thời gian xử lý';
+          } else if (e.toString().contains('connection')) {
+            _recognitionResult = 'Lỗi kết nối';
+          } else {
+            _recognitionResult = 'Lỗi khi xử lý ảnh: ${e.toString().split(':').first}';
+          }
+          _isLoading = false;
         });
       }
     }
   }
 
   void _toggleFlash() {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return;
-    }
+    if (_controller == null || !_controller!.value.isInitialized) return;
 
     setState(() {
-      // Chuyển đổi giữa 3 chế độ flash
-      switch (_flashMode) {
-        case FlashMode.off:
-          _flashMode = FlashMode.auto;
-          break;
-        case FlashMode.auto:
-          _flashMode = FlashMode.torch;
-          break;
-        case FlashMode.torch:
-          _flashMode = FlashMode.off;
-          break;
-        default:
-          _flashMode = FlashMode.off;
-      }
-
-      _cameraController!.setFlashMode(_flashMode);
-    });
-  }
-
-  void _backToCamera() {
-    setState(() {
-      _showPreview = false;
-      _image = null;
-      _result = '';
+      _flashMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+      _controller!.setFlashMode(_flashMode);
     });
   }
 
   IconData _getFlashIcon() {
-    switch (_flashMode) {
-      case FlashMode.off:
-        return Icons.flash_off;
-      case FlashMode.auto:
-        return Icons.flash_auto;
-      case FlashMode.torch:
-        return Icons.flash_on;
-      default:
-        return Icons.flash_off;
-    }
+    return _flashMode == FlashMode.torch ? Icons.flash_on : Icons.flash_off;
   }
 
   Widget _buildCameraPreview() {
     if (!_isCameraInitialized) {
-      return const Center(
+      return Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Đang khởi tạo camera...'),
-          ],
-        ),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(
+                'Đang khởi tạo camera...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              TextButton(
+                onPressed: _initializeCamera,
+                child: const Text('Thử lại'),
+              )
+            ]),
       );
     }
 
-    if (_showPreview && _image != null) {
+    if (_capturedImage != null) {
       return Stack(
         children: [
-          Center(
+          Positioned.fill(
             child: Image.file(
-              _image!,
+              _capturedImage!,
               fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
             ),
           ),
-          if (_isProcessing)
-            const Center(child: CircularProgressIndicator()),
+          if (_recognitionResult.isNotEmpty)
+            Positioned(
+              bottom: 100,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.black54,
+                child: Text(
+                  'Kết quả: $_recognitionResult',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ],
       );
     }
 
-    return Stack(
-      children: [
-        CameraPreview(_cameraController!),
-        if (_isProcessing)
-          const Center(child: CircularProgressIndicator()),
-      ],
-    );
+    return CameraPreview(_controller!);
   }
 
   @override
@@ -241,42 +212,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         title: const Text('Nhận diện hoa'),
         actions: [
-          if (_currentIndex == 0 && !_showPreview)
-            IconButton(
-              icon: const Icon(Icons.photo_library),
-              onPressed: _pickImage,
-            ),
-        ],
-      ),
-      body: _currentIndex == 0 ? _buildCameraPreview() : _screens[_currentIndex],
-      floatingActionButton: _currentIndex == 0
-          ? Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (!_showPreview)
-            FloatingActionButton(
-              heroTag: 'flash',
-              onPressed: _toggleFlash,
-              child: Icon(_getFlashIcon()),
-            ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'capture',
-            onPressed: _showPreview ? _backToCamera : _takePicture,
-            child: Icon(_showPreview ? Icons.refresh : Icons.camera),
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            onPressed: _pickImageFromGallery,
+            tooltip: 'Chọn ảnh từ thư viện',
           ),
         ],
-      )
-          : null,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Tra cứu'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Cài đặt'),
+      ),
+      body: Stack(
+        children: [
+          _buildCameraPreview(),
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator()),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'flash',
+            onPressed: _toggleFlash,
+            child: Icon(_getFlashIcon()),
+            tooltip: 'Bật/Tắt đèn flash',
+          ),
+          const SizedBox(height: 20),
+          FloatingActionButton(
+            heroTag: 'capture',
+            onPressed: _takePicture,
+            child: const Icon(Icons.camera_alt),
+            tooltip: 'Chụp ảnh',
+          ),
         ],
       ),
     );
