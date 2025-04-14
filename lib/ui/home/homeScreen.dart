@@ -20,6 +20,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   CameraController? _cameraController;
   FlashMode _flashMode = FlashMode.off;
   bool _showPreview = false;
+  bool _isCameraInitialized = false;
+  bool _isProcessing = false;
 
   final List<Widget> _screens = [
     const SizedBox(), // Placeholder, sẽ thay bằng camera view
@@ -35,6 +37,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive) {
+      _cameraController?.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      if (_cameraController != null) {
+        _initializeCamera();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cameraController?.dispose();
@@ -42,14 +59,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    if (cameras.isNotEmpty) {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        debugPrint('No cameras found');
+        return;
+      }
+
       _cameraController = CameraController(
-        cameras.first,
+        cameras.firstWhere(
+              (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => cameras.first,
+        ),
         ResolutionPreset.high,
       );
+
       await _cameraController!.initialize();
-      if (mounted) setState(() {});
+
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Camera initialization error: $e');
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = false;
+        });
+      }
     }
   }
 
@@ -66,10 +104,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     try {
+      setState(() {
+        _isProcessing = true;
+      });
+
       final image = await _cameraController!.takePicture();
       _processImage(File(image.path));
     } catch (e) {
       debugPrint('Error taking picture: $e');
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -80,14 +127,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _result = '';
     });
 
-    // Gọi AI nhận diện
-    final result = await FlowerClassifier.classifyImage(image.path);
-    if (mounted) {
-      setState(() {
-        _result = result != null && result.isNotEmpty
-            ? result[0]['label']
-            : 'Dữ liệu chưa có trên hệ thống';
-      });
+    try {
+      // Gọi AI nhận diện
+      final result = await FlowerClassifier.classifyImage(image.path);
+      if (mounted) {
+        setState(() {
+          _result = result != null && result.isNotEmpty
+              ? result[0]['label']
+              : 'Không nhận diện được loại hoa';
+          _isProcessing = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error processing image: $e');
+      if (mounted) {
+        setState(() {
+          _result = 'Lỗi khi xử lý ảnh';
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -137,97 +195,79 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Widget _buildCameraPreview() {
+    if (!_isCameraInitialized) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Đang khởi tạo camera...'),
+          ],
+        ),
+      );
+    }
+
+    if (_showPreview && _image != null) {
+      return Stack(
+        children: [
+          Center(
+            child: Image.file(
+              _image!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+          ),
+          if (_isProcessing)
+            const Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        CameraPreview(_cameraController!),
+        if (_isProcessing)
+          const Center(child: CircularProgressIndicator()),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nhận diện hoa')),
-      body: _currentIndex == 0
-          ? Stack(
+      appBar: AppBar(
+        title: const Text('Nhận diện hoa'),
+        actions: [
+          if (_currentIndex == 0 && !_showPreview)
+            IconButton(
+              icon: const Icon(Icons.photo_library),
+              onPressed: _pickImage,
+            ),
+        ],
+      ),
+      body: _currentIndex == 0 ? _buildCameraPreview() : _screens[_currentIndex],
+      floatingActionButton: _currentIndex == 0
+          ? Column(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Hiển thị camera hoặc ảnh preview
-          if (!_showPreview && _cameraController != null && _cameraController!.value.isInitialized)
-            CameraPreview(_cameraController!)
-          else if (_image != null)
-            Center(
-              child: Image.file(
-                _image!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-              ),
-            )
-          else
-            const Center(child: CircularProgressIndicator()),
-
-          // Kết quả nhận diện
-          if (_result.isNotEmpty)
-            Positioned(
-              top: 20,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                color: Colors.black54,
-                child: Text(
-                  "Kết quả: $_result",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+          if (!_showPreview)
+            FloatingActionButton(
+              heroTag: 'flash',
+              onPressed: _toggleFlash,
+              child: Icon(_getFlashIcon()),
             ),
-
-          // Nút quay lại camera (khi đang xem preview)
-          if (_showPreview)
-            Positioned(
-              top: 20,
-              left: 20,
-              child: FloatingActionButton(
-                heroTag: 'back',
-                mini: true,
-                onPressed: _backToCamera,
-                child: const Icon(Icons.arrow_back),
-              ),
-            ),
-
-          // Các nút điều khiển
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Nút chọn ảnh từ thư viện
-                if (!_showPreview)
-                  FloatingActionButton(
-                    heroTag: 'gallery',
-                    onPressed: _pickImage,
-                    child: const Icon(Icons.photo_library),
-                  ),
-
-                // Nút chụp ảnh hoặc chụp lại
-                FloatingActionButton(
-                  heroTag: 'capture',
-                  onPressed: _showPreview ? _backToCamera : _takePicture,
-                  child: Icon(_showPreview ? Icons.camera_alt : Icons.camera),
-                ),
-
-                // Nút bật/tắt đèn flash (chỉ hiện khi không ở chế độ preview)
-                if (!_showPreview)
-                  FloatingActionButton(
-                    heroTag: 'flash',
-                    onPressed: _toggleFlash,
-                    child: Icon(_getFlashIcon()),
-                  ),
-              ],
-            ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            heroTag: 'capture',
+            onPressed: _showPreview ? _backToCamera : _takePicture,
+            child: Icon(_showPreview ? Icons.refresh : Icons.camera),
           ),
         ],
       )
-          : _screens[_currentIndex],
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
