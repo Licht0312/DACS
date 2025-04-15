@@ -1,0 +1,12 @@
+hoa_bo_cong_anh
+hoa_cuc
+hoa_dam_but
+hoa_dao
+hoa_hong
+hoa_hue
+hoa_huong_duong
+hoa_mai
+hoa_mau_don
+hoa_sen
+hoa_tulip
+hoa_van_tho

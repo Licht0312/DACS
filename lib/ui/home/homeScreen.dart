@@ -18,19 +18,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
   FlashMode _flashMode = FlashMode.off;
   bool _isCameraInitialized = false;
+  bool _isProcessingImage = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
-    super.dispose();
   }
 
   Future<void> _initializeCamera() async {
@@ -86,9 +80,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _pickImageFromGallery() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      _processImage(File(pickedFile.path));
+    if (_isProcessingImage) return;
+
+    try {
+      setState(() {
+        _isProcessingImage = true;
+        _isLoading = true;
+      });
+
+      // Giải phóng camera trước khi mở gallery
+      if (_controller != null && _isCameraInitialized) {
+        await _controller!.dispose();
+        setState(() {
+          _isCameraInitialized = false;
+        });
+      }
+
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200, // Giới hạn kích thước ảnh
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        await _processImage(File(pickedFile.path));
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error picking image: $e');
+      debugPrint('Stack trace: $stackTrace');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingImage = false;
+          _isLoading = false;
+        });
+      }
+      // Khởi tạo lại camera sau khi xử lý ảnh xong
+      if (!_isCameraInitialized) {
+        await _initializeCamera();
+      }
     }
   }
 
@@ -224,26 +255,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _buildCameraPreview(),
           if (_isLoading)
             const Center(child: CircularProgressIndicator()),
+          // Đặt nút ở góc dưới giữa màn hình
+          Positioned(
+            bottom: 80,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'flash',
+                  onPressed: _toggleFlash,
+                  child: Icon(_getFlashIcon()),
+                  tooltip: 'Bật/Tắt đèn flash',
+                ),
+                const SizedBox(width: 40),
+                FloatingActionButton(
+                  heroTag: 'capture',
+                  onPressed: _takePicture,
+                  child: const Icon(Icons.camera_alt),
+                  tooltip: 'Chụp ảnh',
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'flash',
-            onPressed: _toggleFlash,
-            child: Icon(_getFlashIcon()),
-            tooltip: 'Bật/Tắt đèn flash',
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0, // Vị trí mặc định là Trang chủ
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Trang chủ',
           ),
-          const SizedBox(height: 20),
-          FloatingActionButton(
-            heroTag: 'capture',
-            onPressed: _takePicture,
-            child: const Icon(Icons.camera_alt),
-            tooltip: 'Chụp ảnh',
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Tra cứu',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Cài đặt',
           ),
         ],
+        onTap: (index) {
+          // Thêm điều hướng sang các trang khác nếu cần
+
+          if (index == 1) {
+            Navigator.pushNamed(context, '/lookup');
+          } else if (index == 2) {
+            Navigator.pushNamed(context, '/settings');
+          }
+        },
       ),
     );
   }

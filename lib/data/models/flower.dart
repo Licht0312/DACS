@@ -2,7 +2,6 @@ class Flower {
   final String name;
   final String scientificName; //Tên khoa học
   final String description; // mô tả
-  final List<String> imageUrls; // Could be multiple image
   final String genus; //loài hoa
   final String bloomingSeason; // mùa nở
   final String color; // màu sắc
@@ -11,7 +10,6 @@ class Flower {
     required this.name,
     required this.scientificName,
     required this.description,
-    required this.imageUrls,
     required this.genus,
     required this.bloomingSeason,
     required this.color,
@@ -23,7 +21,6 @@ class Flower {
       name: json['name'] as String,
       scientificName: json['scientificName'] as String,
       description: json['description'] as String,
-      imageUrls: (json['imageUrls'] as List<dynamic>).map((e) => e as String).toList(),
       genus: json['genus'] as String,
       bloomingSeason: json['bloomingSeason'] as String,
       color: json['color'] as String,
@@ -34,7 +31,6 @@ class Flower {
     'name': name,
     'scientificName': scientificName,
     'description': description,
-    'imageUrls': imageUrls,
     'genus': genus,
     'bloomingSeason': bloomingSeason,
     'color': color,

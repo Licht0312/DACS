@@ -1,8 +1,8 @@
-import 'package:app_doan_nhandien/ui/home/homeScreen.dart';
 import 'package:flutter/material.dart';
+import 'package:app_doan_nhandien/ui/home/homeScreen.dart';
+import 'package:app_doan_nhandien/ui/lookup/lookupScreen.dart';
+import 'package:app_doan_nhandien/ui/setting/settingScreen.dart';
 import 'flower_classifier.dart'; // import file AI
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,8 +29,13 @@ class MyApp extends StatelessWidget {
           centerTitle: true,
         ),
       ),
-      home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const HomeScreen(),
+        '/lookup': (context) => const LookupScreen(),
+        '/settings': (context) => const SettingScreen(),
+      },
     );
   }
 }

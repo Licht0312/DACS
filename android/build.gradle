@@ -16,25 +16,26 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-pluginManagement {
-    repositories {
-        // ... các repositories
-    }
-    plugins {
-        id "com.android.application" version "8.2.1" // Thay đổi phiên bản tại đây
-        // ... các plugins khác
-    }
-}
-android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
+//pluginManagement {
+//    repositories {
+//        // ... các repositories
+//    }
+//    plugins {
+//        id "com.android.application" version "8.2.1" // Thay đổi phiên bản tại đây
+//        // ... các plugins khác
+//    }
+//}
+//android {
+//    compileOptions {
+//        sourceCompatibility JavaVersion.VERSION_17
+//        targetCompatibility JavaVersion.VERSION_17
+//    }
+//
+//    kotlinOptions {
+//        jvmTarget = '17'
+//    }
+//}
 
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-}
 buildscript {
     ext.kotlin_version = '1.9.22' // Cập nhật Kotlin nếu cần
     repositories {
@@ -42,10 +43,12 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4' // Phiên bản tương thích với Flutter 3.29
+        classpath 'com.android.tools.build:gradle:8.2.2'
+        // Phiên bản tương thích với Flutter 3.29
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-}
+
+//dependencies {
+//    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+//}
