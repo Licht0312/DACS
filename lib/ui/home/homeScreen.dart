@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:app_doan_nhandien/flower_classifier.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -213,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           if (_recognitionResult.isNotEmpty)
             Positioned(
-              bottom: 100,
+              bottom: 150,
               left: 0,
               right: 0,
               child: Container(
@@ -257,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const Center(child: CircularProgressIndicator()),
           // Đặt nút ở góc dưới giữa màn hình
           Positioned(
-            bottom: 80,
+            bottom: 50,
             left: 0,
             right: 0,
             child: Row(

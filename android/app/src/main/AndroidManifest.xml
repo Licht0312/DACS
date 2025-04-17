@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.app_doan_nhandien">
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><!-- Nếu cần đọc ảnh từ thiết bị -->
+    <!-- Nếu mô hình AI cần tải dữ liệu online -->
 
     <!-- Các permission cần thiết -->
     <uses-permission android:name="android.permission.CAMERA" />

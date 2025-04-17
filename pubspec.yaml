@@ -9,27 +9,39 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations: # Thêm dòng này
+      sdk: flutter
+  tensorflow_lite_flutter: 2.0.1
   cupertino_icons: ^1.0.8
-  tflite_flutter: ^0.9.0
-  camera: ^0.10.0+5
-  permission_handler: ^10.4.0
+  tflite_flutter: ^0.11.0
+  camera: ^0.11.1
+  permission_handler: ^12.0.0+1
   image_picker: ^1.0.4
   path_provider: ^2.1.2
   shared_preferences: ^2.2.2
   url_launcher: ^6.1.11
-  share_plus: ^7.2.1
-  # Chỉ giữ lại plugin tflite cũ từ local
-  tflite:
-    path: my_plugins/tflite
-
+  share_plus: ^11.0.0
+  tflite: ^1.1.2
+  provider: ^6.0.0
+  intl: ^0.19.0
+  easy_localization: ^3.0.0
+  image: ^4.2.0
+  collection: ^1.18.0
+  flutter_plugin_android_lifecycle: ^2.0.10
+#  tflite_flutter_helper_plus: ^0.0.2
+#  ai_helper: ^0.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 
-flutter:
-  uses-material-design: true
 
+flutter:
+  plugin:
+    androidPackage: sq.flutter.tflite
+    pluginClass: TflitePlugin
+  generate: true
   assets:
     - assets/flower_model.tflite
+    - assets/labels.txt

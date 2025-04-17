@@ -1,0 +1,2 @@
+C:/DACS/android/app/.cxx/RelWithDebInfo/445r431q/x86/CMakeFiles/edit_cache.dir
+C:/DACS/android/app/.cxx/RelWithDebInfo/445r431q/x86/CMakeFiles/rebuild_cache.dir

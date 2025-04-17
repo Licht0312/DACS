@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+
+
+import '../../main.dart';
 //import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SettingScreen extends StatefulWidget {
@@ -42,37 +48,36 @@ class _SettingScreenState extends State<SettingScreen> {
   Future<void> _changeLanguage() async {
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Chọn ngôn ngữ'),
-        children: [
-          RadioListTile(
-            title: const Text('Tiếng Việt'),
-            value: 'Tiếng Việt',
-            groupValue: _selectedLanguage,
-            onChanged: (value) => Navigator.pop(context, value),
-          ),
-          RadioListTile(
-            title: const Text('English'),
-            value: 'English',
-            groupValue: _selectedLanguage,
-            onChanged: (value) => Navigator.pop(context, value),
-          ),
-        ],
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.language),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile(
+              title: const Text('English'),
+              value: 'en',
+              groupValue: _selectedLanguage,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile(
+              title: const Text('Tiếng Việt'),
+              value: 'vi',
+              groupValue: _selectedLanguage,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+          ],
+        ),
       ),
     );
 
     if (result != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('language', result);
-      setState(() {
-        _selectedLanguage = result;
-      });
-      // Cần restart app để áp dụng ngôn ngữ mới
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Khởi động lại ứng dụng để áp dụng ngôn ngữ mới'),
-        ),
-      );
+      setState(() => _selectedLanguage = result);
+
+      // Reload MaterialApp với locale mới
+      final widget = context.findAncestorWidgetOfExactType<MaterialApp>();
+      widget?.onGenerateTitle?.call(context);
     }
   }
 
@@ -105,10 +110,9 @@ class _SettingScreenState extends State<SettingScreen> {
   Future<void> _toggleDarkMode(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('darkMode', value);
-    setState(() {
-      _darkModeEnabled = value;
-    });
-    // Cần restart app hoặc sử dụng Provider/Bloc để áp dụng theme
+
+    // Gọi đến ThemeProvider để cập nhật theme
+    Provider.of<ThemeProvider>(context, listen: false).toggleTheme(value);
   }
 
   @override
